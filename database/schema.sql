@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS bookings (
     notes TEXT,
     status ENUM('pending', 'confirmed', 'cancelled', 'completed') DEFAULT 'pending',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_date_time (date, time),
     INDEX idx_booking_id (booking_id),
     INDEX idx_email (email)
