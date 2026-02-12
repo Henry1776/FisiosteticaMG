@@ -1,6 +1,6 @@
 -- Create database
 CREATE DATABASE IF NOT EXISTS booking_system;
-USE booking_system;
+-- USE booking_system;
 
 -- Create bookings table
 CREATE TABLE IF NOT EXISTS bookings (
