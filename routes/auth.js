@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 const db = require('../config/database');
+const auth = require('../middleware/auth');
 
 // @route   POST api/auth/login
 // @desc    Authenticate user & get token
@@ -105,7 +106,7 @@ router.post('/register', [
 // @route   GET api/auth/user
 // @desc    Get logged in user
 // @access  Private
-const auth = require('../middleware/auth');
+
 router.get('/user', auth, async (req, res) => {
     try {
         const [users] = await db.execute('SELECT id, username, email, role, created_at FROM users WHERE id = ?', [req.user.id]);
