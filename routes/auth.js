@@ -61,6 +61,47 @@ router.post('/login', [
     }
 });
 
+// @route   POST api/auth/register
+// @desc    Register a new admin user
+// @access  Private (Admin only)
+router.post('/register', [
+    auth, // Protect route
+    body('username', 'Username is required').not().isEmpty(),
+    body('email', 'Please include a valid email').isEmail(),
+    body('password', 'Please enter a password with 6 or more characters').isLength({ min: 6 })
+], async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { username, email, password } = req.body;
+
+    try {
+        // Check if user exists
+        const [existingUsers] = await db.execute('SELECT id FROM users WHERE email = ? OR username = ?', [email, username]);
+        if (existingUsers.length > 0) {
+            return res.status(400).json({ errors: [{ msg: 'User already exists' }] });
+        }
+
+        // Hash password
+        const salt = await bcrypt.genSalt(10);
+        const passwordHash = await bcrypt.hash(password, salt);
+
+        // Insert user
+        await db.execute(
+            'INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, ?)',
+            [username, email, passwordHash, 'admin'] // Default to admin role for now
+        );
+
+        res.json({ msg: 'User registered successfully' });
+
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server error');
+    }
+});
+
 // @route   GET api/auth/user
 // @desc    Get logged in user
 // @access  Private

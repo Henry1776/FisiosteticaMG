@@ -22,7 +22,12 @@
   "devDependencies": {
     "nodemon": "^3.0.2"
   },
-  "keywords": ["booking", "website", "nodejs", "mysql"],
+  "keywords": [
+    "booking",
+    "website",
+    "nodejs",
+    "mysql"
+  ],
   "author": "Tu Empresa",
   "license": "MIT"
 }

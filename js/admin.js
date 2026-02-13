@@ -9,9 +9,12 @@ class AdminPanel {
     checkAuth() {
         const token = localStorage.getItem('token');
         if (!token) {
-            window.location.href = '/login';
+            // Use replace to prevent back navigation
+            window.location.replace('/login.html');
+            return;
         }
         this.token = token;
+        document.getElementById('adminContent').style.display = 'block';
     }
 
     init() {
@@ -41,6 +44,11 @@ class AdminPanel {
         // Save booking button
         document.getElementById('saveBookingBtn').addEventListener('click', () => {
             this.saveBooking();
+        });
+
+        // Register user button
+        document.getElementById('saveUserBtn').addEventListener('click', () => {
+            this.registerUser();
         });
     }
 
@@ -268,6 +276,50 @@ class AdminPanel {
             this.loadBookings();
         } catch (error) {
             console.error('Error saving booking:', error);
+            this.showError(error.message);
+        }
+    }
+
+    async registerUser() {
+        const username = document.getElementById('regUsername').value;
+        const email = document.getElementById('regEmail').value;
+        const password = document.getElementById('regPassword').value;
+
+        if (!username || !email || !password) {
+            this.showError('Por favor complete todos los campos');
+            return;
+        }
+
+        if (password.length < 6) {
+            this.showError('La contraseña debe tener al menos 6 caracteres');
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-auth-token': this.token
+                },
+                body: JSON.stringify({ username, email, password })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.errors ? data.errors[0].msg : 'Error al registrar usuario');
+            }
+
+            this.showSuccess('Administrador registrado exitosamente');
+
+            // Close modal and reset form
+            const modal = bootstrap.Modal.getInstance(document.getElementById('registerUserModal'));
+            modal.hide();
+            document.getElementById('registerUserForm').reset();
+
+        } catch (error) {
+            console.error('Error registering user:', error);
             this.showError(error.message);
         }
     }
