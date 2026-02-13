@@ -27,12 +27,21 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname)));
 
 // Routes
-app.use('/api/bookings', require('./routes/bookings'));
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/bookings', require('./routes/bookings')); // Note: Validation is inside routes, Auth check will be added inside specific routes or globally here? 
+// Better to add auth middleware to specific routes inside routes/bookings.js or add it here for all methods except GET (if public booking is allowed). 
+// But bookings.js handles public booking creation too. So we can't protect the whole route.
+// Let's modify bookings.js later to protect specific endpoints.
+
 app.use('/api/contact', require('./routes/contact'));
 
 // Serve HTML files
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+app.get('/login', (req, res) => {
+    res.sendFile(path.join(__dirname, 'login.html'));
 });
 
 app.get('/about', (req, res) => {
@@ -51,6 +60,10 @@ app.get('/bookings', (req, res) => {
     res.sendFile(path.join(__dirname, 'bookings.html'));
 });
 
+// Protect Admin Panel access
+// Since this is a SPA-like admin panel served as static HTML, we can't fully protect it server-side without sessions/cookies middleware that checks token.
+// But we are using JWT in localStorage. The server just serves the HTML. The JS on the page will check the token.
+// However, strictly speaking, /admin should redirect if not authenticated? Client-side redirect in admin.js is common for JWT.
 app.get('/admin', (req, res) => {
     res.sendFile(path.join(__dirname, 'admin.html'));
 });

@@ -2,6 +2,7 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const router = express.Router();
 const db = require('../config/database');
+const auth = require('../middleware/auth');
 
 // Validation rules
 const bookingValidation = [
@@ -14,7 +15,7 @@ const bookingValidation = [
     body('time').matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).withMessage('Hora inválida')
 ];
 
-// Create booking
+// Create booking (Public)
 router.post('/', bookingValidation, async (req, res) => {
     try {
         const errors = validationResult(req);
@@ -65,8 +66,8 @@ router.post('/', bookingValidation, async (req, res) => {
     }
 });
 
-// Get all bookings (admin)
-router.get('/', async (req, res) => {
+// Get all bookings (Unique to Admin - Protected)
+router.get('/', auth, async (req, res) => {
     try {
         const [bookings] = await db.execute(
             'SELECT * FROM bookings ORDER BY date DESC, time DESC'
@@ -78,11 +79,11 @@ router.get('/', async (req, res) => {
     }
 });
 
-// Get booking by ID
-router.get('/:bookingId', async (req, res) => {
+// Get booking by ID (Protected)
+router.get('/:bookingId', auth, async (req, res) => {
     try {
         const { bookingId } = req.params;
-        
+
         const [bookings] = await db.execute(
             'SELECT * FROM bookings WHERE booking_id = ?',
             [bookingId]
@@ -99,8 +100,8 @@ router.get('/:bookingId', async (req, res) => {
     }
 });
 
-// Update entire booking
-router.put('/:bookingId', async (req, res) => {
+// Update entire booking (Protected)
+router.put('/:bookingId', auth, async (req, res) => {
     try {
         const { bookingId } = req.params;
         const {
@@ -154,8 +155,8 @@ router.put('/:bookingId', async (req, res) => {
     }
 });
 
-// Delete booking
-router.delete('/:bookingId', async (req, res) => {
+// Delete booking (Protected)
+router.delete('/:bookingId', auth, async (req, res) => {
     try {
         const { bookingId } = req.params;
 
@@ -175,8 +176,8 @@ router.delete('/:bookingId', async (req, res) => {
     }
 });
 
-// Update booking status
-router.patch('/:bookingId/status', async (req, res) => {
+// Update booking status (Protected)
+router.patch('/:bookingId/status', auth, async (req, res) => {
     try {
         const { bookingId } = req.params;
         const { status } = req.body;
@@ -202,11 +203,11 @@ router.patch('/:bookingId/status', async (req, res) => {
     }
 });
 
-// Get available time slots for a date
+// Get available time slots for a date (Public)
 router.get('/available/:date', async (req, res) => {
     try {
         const { date } = req.params;
-        
+
         // Get booked times for the date
         const [bookedTimes] = await db.execute(
             'SELECT time FROM bookings WHERE date = ? AND status != "cancelled"',
@@ -214,15 +215,15 @@ router.get('/available/:date', async (req, res) => {
         );
 
         const bookedTimeSlots = bookedTimes.map(booking => booking.time);
-        
+
         // Define all possible time slots
         const allTimeSlots = [
-            '08:00', '09:00', '10:00', '11:00', 
+            '08:00', '09:00', '10:00', '11:00',
             '13:00', '14:00', '15:00', '16:00', '17:00'
         ];
 
         // Filter out booked times
-        const availableSlots = allTimeSlots.filter(time => 
+        const availableSlots = allTimeSlots.filter(time =>
             !bookedTimeSlots.includes(time)
         );
 

@@ -1,8 +1,17 @@
 class AdminPanel {
     constructor() {
+        this.checkAuth();
         this.bookings = [];
         this.filteredBookings = [];
         this.init();
+    }
+
+    checkAuth() {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = '/login';
+        }
+        this.token = token;
     }
 
     init() {
@@ -38,8 +47,14 @@ class AdminPanel {
     async loadBookings() {
         try {
             this.showLoading(true);
-            const response = await fetch('/api/bookings');
-            
+            const response = await fetch('/api/bookings', {
+                headers: { 'x-auth-token': this.token }
+            });
+
+            if (response.status === 401) {
+                window.location.href = '/login';
+                return;
+            }
             if (!response.ok) {
                 throw new Error('Error al cargar las citas');
             }
@@ -88,7 +103,7 @@ class AdminPanel {
 
     renderBookings() {
         const tbody = document.getElementById('bookingsTableBody');
-        
+
         if (this.filteredBookings.length === 0) {
             tbody.innerHTML = '<tr><td colspan="9" class="text-center">No se encontraron citas</td></tr>';
             return;
@@ -175,7 +190,8 @@ class AdminPanel {
             const response = await fetch(`/api/bookings/${bookingId}/status`, {
                 method: 'PATCH',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'x-auth-token': this.token
                 },
                 body: JSON.stringify({ status: newStatus })
             });
@@ -231,7 +247,8 @@ class AdminPanel {
             const response = await fetch(`/api/bookings/${bookingId}`, {
                 method: 'PUT',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'x-auth-token': this.token
                 },
                 body: JSON.stringify(formData)
             });
@@ -242,11 +259,11 @@ class AdminPanel {
             }
 
             this.showSuccess('Cita actualizada exitosamente');
-            
+
             // Close modal
             const modal = bootstrap.Modal.getInstance(document.getElementById('editBookingModal'));
             modal.hide();
-            
+
             // Reload bookings
             this.loadBookings();
         } catch (error) {
@@ -262,7 +279,8 @@ class AdminPanel {
 
         try {
             const response = await fetch(`/api/bookings/${bookingId}`, {
-                method: 'DELETE'
+                method: 'DELETE',
+                headers: { 'x-auth-token': this.token }
             });
 
             if (!response.ok) {
