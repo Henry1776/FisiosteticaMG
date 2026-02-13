@@ -13,14 +13,26 @@ app.use(helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "https://cdn.jsdelivr.net"],
+            scriptSrc: ["'self'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://cdn.tailwindcss.com"],
+            scriptSrcElem: ["'self'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://cdn.tailwindcss.com"],
             styleSrc: ["'self'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "'unsafe-inline'"],
-            fontSrc: ["'self'", "https://cdnjs.cloudflare.com"],
+            styleSrcElem: ["'self'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "'unsafe-inline'"],
+            fontSrc: ["'self'", "https://cdnjs.cloudflare.com", "data:"],
             imgSrc: ["'self'", "data:", "https:"],
+            connectSrc: ["'self'"]
         },
     },
 }));
 app.use(cors());
+
+// Log all requests for debugging
+app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+    if (req.method === 'POST' && req.url.includes('bookings')) {
+        console.log('[BOOKING REQUEST BODY]:', JSON.stringify(req.body, null, 2));
+    }
+    next();
+});
 
 // Rate limiting
 const limiter = rateLimit({
@@ -38,8 +50,12 @@ app.use(express.static(path.join(__dirname)));
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
-app.use('/api/bookings', require('./routes/bookings')); // Note: Validation is inside routes, Auth check will be added inside specific routes or globally here? 
-// Better to add auth middleware to specific routes inside routes/bookings.js or add it here for all methods except GET (if public booking is allowed). 
+
+// Log before bookings route
+app.use('/api/bookings', (req, res, next) => {
+    console.log('[BOOKINGS ROUTE ACCESSED]');
+    next();
+}, require('./routes/bookings'));// Better to add auth middleware to specific routes inside routes/bookings.js or add it here for all methods except GET (if public booking is allowed). 
 // But bookings.js handles public booking creation too. So we can't protect the whole route.
 // Let's modify bookings.js later to protect specific endpoints.
 

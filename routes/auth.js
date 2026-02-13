@@ -74,27 +74,6 @@ router.post('/login', [
     }
 });
 
-// TEMPORARY: Generate hash endpoint (REMOVE AFTER FIXING)
-router.get('/generate-hash/:password', async (req, res) => {
-    try {
-        const password = req.params.password;
-        const salt = await bcrypt.genSalt(10);
-        const hash = await bcrypt.hash(password, salt);
-
-        console.log('Generated hash for password:', password);
-        console.log('Hash:', hash);
-
-        // Also test the hash
-        const testMatch = await bcrypt.compare(password, hash);
-        console.log('Test match:', testMatch);
-
-        res.json({ password, hash, testMatch });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: err.message });
-    }
-});
-
 
 // @route   POST api/auth/register
 // @desc    Register a new admin user
