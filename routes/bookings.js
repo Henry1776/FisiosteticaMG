@@ -99,6 +99,82 @@ router.get('/:bookingId', async (req, res) => {
     }
 });
 
+// Update entire booking
+router.put('/:bookingId', async (req, res) => {
+    try {
+        const { bookingId } = req.params;
+        const {
+            firstName,
+            lastName,
+            email,
+            phone,
+            service,
+            date,
+            time,
+            notes,
+            status
+        } = req.body;
+
+        // Check if booking exists
+        const [existingBooking] = await db.execute(
+            'SELECT id FROM bookings WHERE booking_id = ?',
+            [bookingId]
+        );
+
+        if (existingBooking.length === 0) {
+            return res.status(404).json({ error: 'Reserva no encontrada' });
+        }
+
+        // Check if the new time slot is available (excluding current booking)
+        if (date && time) {
+            const [conflictingBookings] = await db.execute(
+                'SELECT id FROM bookings WHERE date = ? AND time = ? AND booking_id != ? AND status != "cancelled"',
+                [date, time, bookingId]
+            );
+
+            if (conflictingBookings.length > 0) {
+                return res.status(400).json({ error: 'Este horario ya está reservado' });
+            }
+        }
+
+        // Update booking
+        const [result] = await db.execute(
+            `UPDATE bookings SET 
+             first_name = ?, last_name = ?, email = ?, phone = ?, 
+             service = ?, date = ?, time = ?, notes = ?, status = ?, 
+             updated_at = NOW() 
+             WHERE booking_id = ?`,
+            [firstName, lastName, email, phone, service, date, time, notes, status, bookingId]
+        );
+
+        res.json({ message: 'Reserva actualizada exitosamente' });
+    } catch (error) {
+        console.error('Error updating booking:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Delete booking
+router.delete('/:bookingId', async (req, res) => {
+    try {
+        const { bookingId } = req.params;
+
+        const [result] = await db.execute(
+            'DELETE FROM bookings WHERE booking_id = ?',
+            [bookingId]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: 'Reserva no encontrada' });
+        }
+
+        res.json({ message: 'Reserva eliminada exitosamente' });
+    } catch (error) {
+        console.error('Error deleting booking:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
 // Update booking status
 router.patch('/:bookingId/status', async (req, res) => {
     try {

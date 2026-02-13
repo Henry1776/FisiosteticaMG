@@ -51,6 +51,10 @@ app.get('/bookings', (req, res) => {
     res.sendFile(path.join(__dirname, 'bookings.html'));
 });
 
+app.get('/admin', (req, res) => {
+    res.sendFile(path.join(__dirname, 'admin.html'));
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
     console.error(err.stack);
