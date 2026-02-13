@@ -9,24 +9,21 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Security middleware
-app.use(helmet({
-    contentSecurityPolicy: {
-        directives: {
-            defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://cdn.tailwindcss.com"],
-            scriptSrcElem: ["'self'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://cdn.tailwindcss.com"],
-            styleSrc: ["'self'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "'unsafe-inline'"],
-            styleSrcElem: ["'self'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "'unsafe-inline'"],
-            fontSrc: ["'self'", "https://cdnjs.cloudflare.com", "data:"],
-            imgSrc: ["'self'", "data:", "https:"],
-            connectSrc: ["'self'"]
-        },
-    },
-}));
-app.use(cors());
+// app.use(helmet({
+//     contentSecurityPolicy: false, // Temporarily disable CSP to test if it's the cause
+//     crossOriginResourcePolicy: { policy: "cross-origin" }
+// }));
+// app.use(cors());
+app.use(cors()); // Keep cors for API access 
 
 // Log all requests for debugging
 app.use((req, res, next) => {
+    // Disable caching for development
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('Surrogate-Control', 'no-store');
+
     console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
     if (req.method === 'POST' && req.url.includes('bookings')) {
         console.log('[BOOKING REQUEST BODY]:', JSON.stringify(req.body, null, 2));
@@ -60,6 +57,7 @@ app.use('/api/bookings', (req, res, next) => {
 // Let's modify bookings.js later to protect specific endpoints.
 
 app.use('/api/contact', require('./routes/contact'));
+app.use('/api/services', require('./routes/services'));
 
 // Serve HTML files
 app.get('/', (req, res) => {

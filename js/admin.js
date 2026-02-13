@@ -1,9 +1,13 @@
 class AdminPanel {
     constructor() {
+        console.log('[ADMIN] AdminPanel scaling up...');
         this.checkAuth();
         this.bookings = [];
         this.filteredBookings = [];
+        this.services = [];
         this.init();
+        window.is_admin_initialized = true;
+        console.log('[ADMIN] AdminPanel initialized successfully');
     }
 
     checkAuth() {
@@ -18,6 +22,7 @@ class AdminPanel {
     }
 
     init() {
+        this.loadServices();
         this.loadBookings();
         this.setupEventListeners();
     }
@@ -49,6 +54,25 @@ class AdminPanel {
         // Register user button
         document.getElementById('saveUserBtn').addEventListener('click', () => {
             this.registerUser();
+        });
+
+        // Event delegation for booking actions
+        document.getElementById('bookingsTableBody').addEventListener('click', (e) => {
+            const btn = e.target.closest('button');
+            if (!btn) return;
+
+            const id = btn.dataset.id;
+            if (!id) return;
+
+            if (btn.classList.contains('action-edit')) {
+                this.editBooking(id);
+            } else if (btn.classList.contains('action-confirm')) {
+                this.updateStatus(id, 'confirmed');
+            } else if (btn.classList.contains('action-cancel')) {
+                this.updateStatus(id, 'cancelled');
+            } else if (btn.classList.contains('action-delete')) {
+                this.deleteBooking(id);
+            }
         });
     }
 
@@ -82,6 +106,29 @@ class AdminPanel {
             this.showError('Error al cargar las citas');
         } finally {
             this.showLoading(false);
+        }
+    }
+
+    async loadServices() {
+        try {
+            const response = await fetch('/api/services');
+            this.services = await response.json();
+            this.updateServiceDropdown();
+        } catch (error) {
+            console.error('Error loading services:', error);
+        }
+    }
+
+    updateServiceDropdown() {
+        const select = document.getElementById('editService');
+        if (select) {
+            select.innerHTML = '<option value="">Seleccionar servicio</option>';
+            this.services.forEach(service => {
+                const option = document.createElement('option');
+                option.value = service.name.toLowerCase().replace(/\s+/g, '_');
+                option.textContent = service.name;
+                select.appendChild(option);
+            });
         }
     }
 
@@ -134,18 +181,18 @@ class AdminPanel {
                 <td>${booking.time}</td>
                 <td>${this.getStatusBadge(booking.status)}</td>
                 <td class="table-actions">
-                    <button class="btn btn-sm btn-outline-primary me-1" onclick="adminPanel.editBooking('${booking.booking_id}')">
+                    <button class="btn btn-sm btn-outline-primary me-1 action-edit" data-id="${booking.booking_id}" title="Editar">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <button class="btn btn-sm btn-outline-success me-1" onclick="adminPanel.updateStatus('${booking.booking_id}', 'confirmed')" 
+                    <button class="btn btn-sm btn-outline-success me-1 action-confirm" data-id="${booking.booking_id}" title="Confirmar" 
                             ${booking.status === 'confirmed' ? 'disabled' : ''}>
                         <i class="fas fa-check"></i>
                     </button>
-                    <button class="btn btn-sm btn-outline-warning me-1" onclick="adminPanel.updateStatus('${booking.booking_id}', 'cancelled')"
+                    <button class="btn btn-sm btn-outline-warning me-1 action-cancel" data-id="${booking.booking_id}" title="Cancelar"
                             ${booking.status === 'cancelled' ? 'disabled' : ''}>
                         <i class="fas fa-times"></i>
                     </button>
-                    <button class="btn btn-sm btn-outline-danger" onclick="adminPanel.deleteBooking('${booking.booking_id}')">
+                    <button class="btn btn-sm btn-outline-danger action-delete" data-id="${booking.booking_id}" title="Eliminar">
                         <i class="fas fa-trash"></i>
                     </button>
                 </td>
@@ -165,15 +212,10 @@ class AdminPanel {
         document.getElementById('completedBookings').textContent = completed;
     }
 
-    getServiceName(service) {
-        const services = {
-            'consulta': 'Consulta General',
-            'limpieza': 'Limpieza Dental',
-            'ortodoncia': 'Ortodoncia',
-            'endodoncia': 'Endodoncia',
-            'cirugia': 'Cirugía'
-        };
-        return services[service] || service;
+    getServiceName(serviceValue) {
+        if (!serviceValue) return '---';
+        const service = this.services.find(s => s.name.toLowerCase().replace(/\s+/g, '_') === serviceValue);
+        return service ? service.name : serviceValue;
     }
 
     getStatusBadge(status) {
@@ -187,7 +229,20 @@ class AdminPanel {
     }
 
     formatDate(dateString) {
-        const date = new Date(dateString + 'T00:00:00');
+        if (!dateString) return '---';
+
+        let date;
+        if (dateString instanceof Date) {
+            date = dateString;
+        } else {
+            // Handle YYYY-MM-DD format
+            date = new Date(dateString + 'T00:00:00');
+        }
+
+        if (isNaN(date.getTime())) {
+            return 'Fecha inválida';
+        }
+
         return date.toLocaleDateString('es-CR', {
             year: 'numeric',
             month: 'short',
@@ -233,7 +288,13 @@ class AdminPanel {
         document.getElementById('editEmail').value = booking.email;
         document.getElementById('editPhone').value = booking.phone;
         document.getElementById('editService').value = booking.service;
-        document.getElementById('editDate').value = booking.date;
+
+        // Handle date string (slice YYYY-MM-DD from ISO string or similar)
+        if (booking.date) {
+            const dateStr = typeof booking.date === 'string' ? booking.date.split('T')[0] : booking.date;
+            document.getElementById('editDate').value = dateStr;
+        }
+
         document.getElementById('editTime').value = booking.time;
         document.getElementById('editStatus').value = booking.status;
         document.getElementById('editNotes').value = booking.notes || '';

@@ -4,16 +4,42 @@ document.addEventListener('DOMContentLoaded', function () {
     const priceDisplay = document.getElementById('price-display');
     const totalPrice = document.getElementById('total-price');
 
+    // Load services dynamically
+    async function loadServices() {
+        try {
+            const response = await fetch('/api/services');
+            const services = await response.json();
+
+            if (serviceSelect) {
+                // Keep the default option
+                serviceSelect.innerHTML = '<option value="">Selecciona un servicio</option>';
+
+                services.forEach(service => {
+                    const option = document.createElement('option');
+                    option.value = service.name.toLowerCase().replace(/\s+/g, '_'); // Consistent ID
+                    option.textContent = `${service.name} - $${Math.round(service.price)}`;
+                    option.setAttribute('data-price', service.price);
+                    option.setAttribute('data-real-name', service.name);
+                    serviceSelect.appendChild(option);
+                });
+            }
+        } catch (error) {
+            console.error('Error loading services:', error);
+        }
+    }
+
+    loadServices();
+
     // Service price update
     if (serviceSelect && priceDisplay && totalPrice) {
         serviceSelect.addEventListener('change', function () {
             const selectedOption = this.options[this.selectedIndex];
             const price = selectedOption.getAttribute('data-price');
 
-            if (price && price !== '0') {
+            if (price && price !== '0' && price !== '0.00') {
                 priceDisplay.classList.remove('hidden');
-                totalPrice.textContent = `$${price}`;
-            } else if (price === '0') {
+                totalPrice.textContent = `$${Math.round(price)}`;
+            } else if (price === '0' || price === '0.00') {
                 priceDisplay.classList.remove('hidden');
                 totalPrice.textContent = 'Cotizar';
             } else {
