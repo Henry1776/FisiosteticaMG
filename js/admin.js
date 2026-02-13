@@ -54,12 +54,16 @@ class AdminPanel {
 
     async loadBookings() {
         try {
+            console.log('[ADMIN] Loading bookings...');
             this.showLoading(true);
             const response = await fetch('/api/bookings', {
                 headers: { 'x-auth-token': this.token }
             });
 
+            console.log('[ADMIN] Bookings response status:', response.status);
+
             if (response.status === 401) {
+                console.log('[ADMIN] Unauthorized, redirecting to login');
                 window.location.href = '/login';
                 return;
             }
@@ -68,11 +72,13 @@ class AdminPanel {
             }
 
             this.bookings = await response.json();
+            console.log('[ADMIN] Loaded bookings:', this.bookings.length, 'records');
+            console.log('[ADMIN] Bookings data:', this.bookings);
             this.filteredBookings = [...this.bookings];
             this.renderBookings();
             this.updateStats();
         } catch (error) {
-            console.error('Error loading bookings:', error);
+            console.error('[ADMIN] Error loading bookings:', error);
             this.showError('Error al cargar las citas');
         } finally {
             this.showLoading(false);
@@ -281,21 +287,27 @@ class AdminPanel {
     }
 
     async registerUser() {
+        console.log('[ADMIN] Register user button clicked');
         const username = document.getElementById('regUsername').value;
         const email = document.getElementById('regEmail').value;
         const password = document.getElementById('regPassword').value;
 
+        console.log('[ADMIN] Form values:', { username, email, password: '***' });
+
         if (!username || !email || !password) {
+            console.log('[ADMIN] Validation failed: missing fields');
             this.showError('Por favor complete todos los campos');
             return;
         }
 
         if (password.length < 6) {
+            console.log('[ADMIN] Validation failed: password too short');
             this.showError('La contraseña debe tener al menos 6 caracteres');
             return;
         }
 
         try {
+            console.log('[ADMIN] Sending registration request...');
             const response = await fetch('/api/auth/register', {
                 method: 'POST',
                 headers: {
@@ -305,12 +317,15 @@ class AdminPanel {
                 body: JSON.stringify({ username, email, password })
             });
 
+            console.log('[ADMIN] Registration response status:', response.status);
             const data = await response.json();
+            console.log('[ADMIN] Registration response data:', data);
 
             if (!response.ok) {
                 throw new Error(data.errors ? data.errors[0].msg : 'Error al registrar usuario');
             }
 
+            console.log('[ADMIN] Registration successful');
             this.showSuccess('Administrador registrado exitosamente');
 
             // Close modal and reset form
@@ -319,7 +334,7 @@ class AdminPanel {
             document.getElementById('registerUserForm').reset();
 
         } catch (error) {
-            console.error('Error registering user:', error);
+            console.error('[ADMIN] Error registering user:', error);
             this.showError(error.message);
         }
     }
