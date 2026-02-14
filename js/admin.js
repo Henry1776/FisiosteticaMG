@@ -56,6 +56,23 @@ class AdminPanel {
             this.registerUser();
         });
 
+        // Save service button
+        document.getElementById('saveServiceBtn').addEventListener('click', () => {
+            this.saveService();
+        });
+
+        // Tab switching
+        const tabs = ['stats', 'bookings', 'users', 'services'];
+        tabs.forEach(tab => {
+            const btn = document.getElementById(`${tab}TabBtn`);
+            if (btn) {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this.switchTab(tab);
+                });
+            }
+        });
+
         // Event delegation for booking actions
         document.getElementById('bookingsTableBody').addEventListener('click', (e) => {
             const btn = e.target.closest('button');
@@ -130,6 +147,141 @@ class AdminPanel {
                 select.appendChild(option);
             });
         }
+        this.renderServicesTable();
+    }
+
+    renderServicesTable() {
+        const tbody = document.getElementById('servicesTableBody');
+        if (!tbody) return;
+
+        if (this.services.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4">No hay servicios configurados</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = this.services.map(service => `
+            <tr>
+                <td><strong>${service.name}</strong></td>
+                <td>${service.description || '---'}</td>
+                <td>$${Math.round(service.price)}</td>
+                <td>${service.duration_minutes} min</td>
+                <td class="table-actions">
+                    <button class="btn btn-sm btn-outline-primary me-1" onclick="adminPanel.editServiceObj(${service.id})">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="adminPanel.deleteService(${service.id})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    switchTab(tab) {
+        // Hide all sections
+        const sections = ['statsSection', 'bookingsSection', 'usersSection', 'servicesSection'];
+        sections.forEach(s => {
+            const el = document.getElementById(s);
+            if (el) el.style.display = 'none';
+        });
+
+        // Show target section
+        const target = document.getElementById(`${tab}Section`);
+        if (target) target.style.display = 'block';
+
+        // Update active tab button
+        const tabs = ['stats', 'bookings', 'users', 'services'];
+        tabs.forEach(t => {
+            const btn = document.getElementById(`${t}TabBtn`);
+            if (btn) {
+                if (t === tab) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            }
+        });
+    }
+
+    async saveService() {
+        const id = document.getElementById('serviceId').value;
+        const name = document.getElementById('serviceName').value;
+        const description = document.getElementById('serviceDescription').value;
+        const price = document.getElementById('servicePrice').value;
+        const duration_minutes = document.getElementById('serviceDuration').value;
+
+        if (!name || price === '') {
+            alert('Por favor completa los campos obligatorios');
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/services', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${this.token}`
+                },
+                body: JSON.stringify({ id, name, description, price, duration_minutes })
+            });
+
+            if (response.ok) {
+                alert(id ? 'Servicio actualizado' : 'Servicio creado');
+                const modal = bootstrap.Modal.getInstance(document.getElementById('serviceModal'));
+                if (modal) modal.hide();
+                await this.loadServices();
+            } else {
+                const error = await response.json();
+                alert('Error: ' + error.error);
+            }
+        } catch (error) {
+            console.error('Error saving service:', error);
+            alert('Error de conexión');
+        }
+    }
+
+    async deleteService(id) {
+        if (!confirm('¿Estás seguro de eliminar este servicio?')) return;
+
+        try {
+            const response = await fetch(`/api/services/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${this.token}`
+                }
+            });
+
+            if (response.ok) {
+                alert('Servicio eliminado');
+                await this.loadServices();
+            } else {
+                alert('Error al eliminar');
+            }
+        } catch (error) {
+            console.error('Error deleting service:', error);
+            alert('Error de conexión');
+        }
+    }
+
+    editServiceObj(id) {
+        const service = this.services.find(s => s.id === id);
+        if (!service) return;
+
+        document.getElementById('serviceId').value = service.id;
+        document.getElementById('serviceName').value = service.name;
+        document.getElementById('serviceDescription').value = service.description || '';
+        document.getElementById('servicePrice').value = service.price;
+        document.getElementById('serviceDuration').value = service.duration_minutes;
+
+        document.getElementById('serviceModalTitle').textContent = 'Editar Servicio';
+        const modal = new bootstrap.Modal(document.getElementById('serviceModal'));
+        modal.show();
+    }
+
+    resetServiceForm() {
+        document.getElementById('serviceId').value = '';
+        document.getElementById('serviceForm').reset();
+        document.getElementById('serviceModalTitle').textContent = 'Nuevo Servicio';
     }
 
     applyFilters() {
