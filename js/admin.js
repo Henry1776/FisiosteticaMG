@@ -27,6 +27,13 @@ class AdminPanel {
         document.getElementById('adminContent').style.display = 'block';
     }
 
+    logout() {
+        if (confirm('¿Estás seguro de que deseas cerrar la sesión?')) {
+            localStorage.removeItem('token');
+            window.location.replace('/login.html');
+        }
+    }
+
     init() {
         this.loadServices();
         this.loadBookings();
@@ -63,10 +70,23 @@ class AdminPanel {
             this.registerUser();
         });
 
+        // Edit user button
+        document.getElementById('saveEditUserBtn').addEventListener('click', () => {
+            this.updateUser();
+        });
+
         // Save service button
         document.getElementById('saveServiceBtn').addEventListener('click', () => {
             this.saveService();
         });
+
+        // Logout button
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', () => {
+                this.logout();
+            });
+        }
 
         // Tab switching
         const tabs = ['stats', 'bookings', 'users', 'services'];
@@ -570,6 +590,9 @@ class AdminPanel {
                 <td>${user.email}</td>
                 <td><span class="badge bg-info">${user.role}</span></td>
                 <td class="table-actions text-end pe-4">
+                    <button class="btn btn-sm btn-outline-primary me-1" onclick="adminPanel.editUser(${user.id})" title="Editar">
+                        <i class="fas fa-edit"></i>
+                    </button>
                     <button class="btn btn-sm btn-outline-danger" onclick="adminPanel.deleteUser(${user.id})" 
                             ${user.id == this.getCurrentUserId() ? 'disabled' : ''} title="Eliminar">
                         <i class="fas fa-trash"></i>
@@ -577,6 +600,52 @@ class AdminPanel {
                 </td>
             </tr>
         `).join('');
+    }
+
+    editUser(id) {
+        const user = this.users.find(u => u.id == id);
+        if (!user) return;
+
+        document.getElementById('editUserId').value = user.id;
+        document.getElementById('editUsername').value = user.username;
+        document.getElementById('editEmail').value = user.email;
+
+        const modal = new bootstrap.Modal(document.getElementById('editUserModal'));
+        modal.show();
+    }
+
+    async updateUser() {
+        const id = document.getElementById('editUserId').value;
+        const username = document.getElementById('editUsername').value;
+        const email = document.getElementById('editEmail').value;
+
+        try {
+            const response = await fetch(`/api/auth/users/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-auth-token': this.token
+                },
+                body: JSON.stringify({ username, email })
+            });
+
+            if (response.status === 401) {
+                this.handleUnauthorized();
+                return;
+            }
+
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.msg || 'Error al actualizar');
+            }
+
+            this.showSuccess('Administrador actualizado correctamente');
+            bootstrap.Modal.getInstance(document.getElementById('editUserModal')).hide();
+            this.loadUsers();
+        } catch (error) {
+            console.error('Error updating user:', error);
+            this.showError(error.message);
+        }
     }
 
     getCurrentUserId() {

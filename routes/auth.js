@@ -166,4 +166,21 @@ router.delete('/users/:id', auth, async (req, res) => {
     }
 });
 
+// @route   PUT api/auth/users/:id
+// @desc    Update a user
+// @access  Private (Admin only)
+router.put('/users/:id', auth, async (req, res) => {
+    const { username, email } = req.body;
+    try {
+        await db.execute(
+            'UPDATE users SET username = ?, email = ? WHERE id = ?',
+            [username, email, req.params.id]
+        );
+        res.json({ msg: 'Usuario actualizado correctamente' });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
 module.exports = router;
