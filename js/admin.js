@@ -10,11 +10,16 @@ class AdminPanel {
         console.log('[ADMIN] AdminPanel initialized successfully');
     }
 
+    handleUnauthorized() {
+        console.log('[ADMIN] Unauthorized access detected, clearing token and redirecting');
+        localStorage.removeItem('token');
+        window.location.replace('/login.html');
+    }
+
     checkAuth() {
         const token = localStorage.getItem('token');
         if (!token) {
-            // Use replace to prevent back navigation
-            window.location.replace('/login.html');
+            this.handleUnauthorized();
             return;
         }
         this.token = token;
@@ -104,8 +109,7 @@ class AdminPanel {
             console.log('[ADMIN] Bookings response status:', response.status);
 
             if (response.status === 401) {
-                console.log('[ADMIN] Unauthorized, redirecting to login');
-                window.location.href = '/login';
+                this.handleUnauthorized();
                 return;
             }
             if (!response.ok) {
@@ -417,6 +421,11 @@ class AdminPanel {
                 body: JSON.stringify({ status: newStatus })
             });
 
+            if (response.status === 401) {
+                this.handleUnauthorized();
+                return;
+            }
+
             if (!response.ok) {
                 throw new Error('Error al actualizar el estado');
             }
@@ -480,6 +489,11 @@ class AdminPanel {
                 body: JSON.stringify(formData)
             });
 
+            if (response.status === 401) {
+                this.handleUnauthorized();
+                return;
+            }
+
             if (!response.ok) {
                 const error = await response.json();
                 throw new Error(error.error || 'Error al actualizar la cita');
@@ -531,6 +545,11 @@ class AdminPanel {
             });
 
             console.log('[ADMIN] Registration response status:', response.status);
+            if (response.status === 401) {
+                this.handleUnauthorized();
+                return;
+            }
+
             const data = await response.json();
             console.log('[ADMIN] Registration response data:', data);
 
@@ -562,6 +581,11 @@ class AdminPanel {
                 method: 'DELETE',
                 headers: { 'x-auth-token': this.token }
             });
+
+            if (response.status === 401) {
+                this.handleUnauthorized();
+                return;
+            }
 
             if (!response.ok) {
                 throw new Error('Error al eliminar la cita');
