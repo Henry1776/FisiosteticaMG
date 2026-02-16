@@ -388,23 +388,36 @@ class AdminPanel {
     formatDate(dateString) {
         if (!dateString) return '---';
 
-        let date;
-        if (dateString instanceof Date) {
-            date = dateString;
-        } else {
-            // Handle YYYY-MM-DD format
-            date = new Date(dateString + 'T00:00:00');
-        }
+        try {
+            let date;
+            if (dateString instanceof Date) {
+                date = dateString;
+            } else if (typeof dateString === 'string') {
+                // If it's already YYYY-MM-DD, parsing directly can lead to timezone shifts
+                // but for Spanish locale display it's usually fine or we split it.
+                if (dateString.includes('T')) {
+                    date = new Date(dateString);
+                } else {
+                    const [year, month, day] = dateString.split('-').map(Number);
+                    date = new Date(year, month - 1, day);
+                }
+            } else {
+                date = new Date(dateString);
+            }
 
-        if (isNaN(date.getTime())) {
-            return 'Fecha inválida';
-        }
+            if (isNaN(date.getTime())) {
+                return 'Fecha inválida';
+            }
 
-        return date.toLocaleDateString('es-CR', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-        });
+            return date.toLocaleDateString('es-CR', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        } catch (e) {
+            console.error('Error formatting date:', e);
+            return 'Error';
+        }
     }
 
     async updateStatus(bookingId, newStatus) {
