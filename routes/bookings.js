@@ -9,7 +9,7 @@ const bookingValidation = [
     body('firstName').trim().isLength({ min: 2 }).withMessage('El nombre debe tener al menos 2 caracteres'),
     body('lastName').trim().isLength({ min: 2 }).withMessage('Los apellidos deben tener al menos 2 caracteres'),
     body('email').isEmail().withMessage('Email inválido'),
-    body('phone').isMobilePhone().withMessage('Teléfono inválido'),
+    body('phone').matches(/^[\+]?[0-9\s\-\(\)]{8,}$/).withMessage('Teléfono inválido (mínimo 8 dígitos)'),
     body('service').notEmpty().withMessage('Debe seleccionar un servicio'),
     body('date').isISO8601().withMessage('Fecha inválida'),
     body('time').matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).withMessage('Hora inválida')

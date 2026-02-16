@@ -16,6 +16,10 @@ const PORT = process.env.PORT || 3000;
 // app.use(cors());
 app.use(cors()); // Keep cors for API access 
 
+// Body parsing middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
 // Log all requests for debugging
 app.use((req, res, next) => {
     // Disable caching for development
@@ -30,17 +34,6 @@ app.use((req, res, next) => {
     }
     next();
 });
-
-// Rate limiting
-const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100 // limit each IP to 100 requests per windowMs
-});
-app.use(limiter);
-
-// Body parsing middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
 // Serve static files
 app.use(express.static(path.join(__dirname)));

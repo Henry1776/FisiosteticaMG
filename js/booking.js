@@ -80,6 +80,9 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             // Send to backend
+            const submitBtn = bookingForm.querySelector('button[type="submit"]');
+            showLoading(submitBtn);
+
             fetch('/api/bookings', {
                 method: 'POST',
                 headers: {
@@ -87,7 +90,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 },
                 body: JSON.stringify(data)
             })
-                .then(response => response.json())
+                .then(async response => {
+                    const result = await response.json();
+                    if (!response.ok) {
+                        throw result;
+                    }
+                    return result;
+                })
                 .then(result => {
                     hideLoading(submitBtn);
                     if (result.bookingId) {
@@ -101,7 +110,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 .catch(error => {
                     hideLoading(submitBtn);
                     console.error('Error:', error);
-                    alert('Error de conexión con el servidor. Por favor intenta más tarde.');
+
+                    if (error.errors) {
+                        const errorMessages = error.errors.map(err => err.msg).join('\n');
+                        alert('Por favor corrige los siguientes errores:\n' + errorMessages);
+                    } else {
+                        alert('Error: ' + (error.error || 'Error de conexión con el servidor. Por favor intenta más tarde.'));
+                    }
                 });
         });
     }
