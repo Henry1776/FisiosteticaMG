@@ -602,7 +602,13 @@ class AdminPanel {
 
     showLoading(show) {
         const loading = document.querySelector('.loading');
-        loading.style.display = show ? 'block' : 'none';
+        if (loading) {
+            if (show) {
+                loading.classList.add('active');
+            } else {
+                loading.classList.remove('active');
+            }
+        }
     }
 
     showSuccess(message) {
