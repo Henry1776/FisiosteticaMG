@@ -5,6 +5,7 @@ class AdminPanel {
         this.bookings = [];
         this.filteredBookings = [];
         this.services = [];
+        this.users = [];
         this.init();
         window.is_admin_initialized = true;
         console.log('[ADMIN] AdminPanel initialized successfully');
@@ -29,6 +30,7 @@ class AdminPanel {
     init() {
         this.loadServices();
         this.loadBookings();
+        this.loadUsers();
         this.setupEventListeners();
     }
 
@@ -523,6 +525,94 @@ class AdminPanel {
             this.loadBookings();
         } catch (error) {
             console.error('Error saving booking:', error);
+            this.showError(error.message);
+        }
+    }
+
+    async loadUsers() {
+        try {
+            console.log('[ADMIN] Loading users...');
+            const response = await fetch('/api/auth/users', {
+                headers: { 'x-auth-token': this.token }
+            });
+
+            if (response.status === 401) {
+                this.handleUnauthorized();
+                return;
+            }
+
+            if (!response.ok) {
+                throw new Error('Error al cargar administradores');
+            }
+
+            this.users = await response.json();
+            console.log('[ADMIN] Loaded users:', this.users.length);
+            this.renderUsersTable();
+        } catch (error) {
+            console.error('[ADMIN] Error loading users:', error);
+            // this.showError('Error al cargar administradores');
+        }
+    }
+
+    renderUsersTable() {
+        const tbody = document.getElementById('usersTableBody');
+        if (!tbody) return;
+
+        if (this.users.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4">No hay administradores registrados</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = this.users.map(user => `
+            <tr>
+                <td class="ps-4">${user.id}</td>
+                <td><strong>${user.username}</strong></td>
+                <td>${user.email}</td>
+                <td><span class="badge bg-info">${user.role}</span></td>
+                <td class="table-actions text-end pe-4">
+                    <button class="btn btn-sm btn-outline-danger" onclick="adminPanel.deleteUser(${user.id})" 
+                            ${user.id == this.getCurrentUserId() ? 'disabled' : ''} title="Eliminar">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    getCurrentUserId() {
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) return null;
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            return payload.user.id;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    async deleteUser(id) {
+        if (!confirm('¿Estás seguro de eliminar este administrador?')) return;
+
+        try {
+            const response = await fetch(`/api/auth/users/${id}`, {
+                method: 'DELETE',
+                headers: { 'x-auth-token': this.token }
+            });
+
+            if (response.status === 401) {
+                this.handleUnauthorized();
+                return;
+            }
+
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.msg || 'Error al eliminar');
+            }
+
+            this.showSuccess('Administrador eliminado correctamente');
+            this.loadUsers();
+        } catch (error) {
+            console.error('Error deleting user:', error);
             this.showError(error.message);
         }
     }

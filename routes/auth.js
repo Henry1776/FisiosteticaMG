@@ -130,4 +130,40 @@ router.get('/user', auth, async (req, res) => {
     }
 });
 
+// @route   GET api/auth/users
+// @desc    Get all users
+// @access  Private (Admin only)
+router.get('/users', auth, async (req, res) => {
+    try {
+        const [users] = await db.execute('SELECT id, username, email, role, created_at FROM users ORDER BY created_at DESC');
+        res.json(users);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
+// @route   DELETE api/auth/users/:id
+// @desc    Delete a user
+// @access  Private (Admin only)
+router.delete('/users/:id', auth, async (req, res) => {
+    try {
+        // Prevent deleting yourself
+        if (req.params.id == req.user.id) {
+            return res.status(400).json({ msg: 'No puedes eliminarte a ti mismo' });
+        }
+
+        const [result] = await db.execute('DELETE FROM users WHERE id = ?', [req.params.id]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ msg: 'Usuario no encontrado' });
+        }
+
+        res.json({ msg: 'Usuario eliminado' });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
 module.exports = router;
