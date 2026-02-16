@@ -113,7 +113,8 @@ class AdminPanel {
                 return;
             }
             if (!response.ok) {
-                throw new Error('Error al cargar las citas');
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || errorData.msg || 'Error al cargar las citas');
             }
 
             this.bookings = await response.json();
@@ -124,7 +125,7 @@ class AdminPanel {
             this.updateStats();
         } catch (error) {
             console.error('[ADMIN] Error loading bookings:', error);
-            this.showError('Error al cargar las citas');
+            this.showError(error.message || 'Error al cargar las citas');
         } finally {
             this.showLoading(false);
         }

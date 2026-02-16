@@ -75,7 +75,8 @@ router.get('/', auth, async (req, res) => {
         res.json(bookings);
     } catch (error) {
         console.error('Error fetching bookings:', error);
-        res.status(500).json({ error: 'Error interno del servidor' });
+        console.error('Stack trace:', error.stack);
+        res.status(500).json({ error: 'Error interno del servidor', details: error.message });
     }
 });
 
