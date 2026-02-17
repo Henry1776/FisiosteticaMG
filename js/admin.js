@@ -35,10 +35,10 @@ class AdminPanel {
     }
 
     init() {
+        this.setupEventListeners();
         this.loadServices();
         this.loadBookings();
         this.loadUsers();
-        this.setupEventListeners();
     }
 
     setupEventListeners() {
@@ -247,7 +247,7 @@ class AdminPanel {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${this.token}`
+                    'x-auth-token': this.token
                 },
                 body: JSON.stringify({ id, name, description, price, duration_minutes })
             });
@@ -274,7 +274,7 @@ class AdminPanel {
             const response = await fetch(`/api/services/${id}`, {
                 method: 'DELETE',
                 headers: {
-                    'Authorization': `Bearer ${this.token}`
+                    'x-auth-token': this.token
                 }
             });
 
@@ -608,7 +608,7 @@ class AdminPanel {
 
         document.getElementById('editUserId').value = user.id;
         document.getElementById('editUsername').value = user.username;
-        document.getElementById('editEmail').value = user.email;
+        document.getElementById('editEmailUser').value = user.email;
 
         const modal = new bootstrap.Modal(document.getElementById('editUserModal'));
         modal.show();

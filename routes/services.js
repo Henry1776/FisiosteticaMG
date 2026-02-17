@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const db = require('../config/database');
 
+const auth = require('../middleware/auth');
+
 // Get all active services
 router.get('/', async (req, res) => {
     try {
@@ -16,7 +18,8 @@ router.get('/', async (req, res) => {
 });
 
 // Create or update service (Admin only)
-router.post('/', async (req, res) => {
+router.post('/', auth, async (req, res) => {
+
     const { id, name, description, price, duration_minutes } = req.body;
     try {
         if (id) {
@@ -41,7 +44,8 @@ router.post('/', async (req, res) => {
 });
 
 // Delete service
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', auth, async (req, res) => {
+
     try {
         // Soft delete
         await db.execute('UPDATE services SET is_active = FALSE WHERE id = ?', [req.params.id]);
