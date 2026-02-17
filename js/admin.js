@@ -1,14 +1,11 @@
 class AdminPanel {
     constructor() {
         console.log('[ADMIN] AdminPanel scaling up...');
-        this.checkAuth();
         this.bookings = [];
         this.filteredBookings = [];
         this.services = [];
         this.users = [];
         this.init();
-        window.is_admin_initialized = true;
-        console.log('[ADMIN] AdminPanel initialized successfully');
     }
 
     handleUnauthorized() {
@@ -17,14 +14,33 @@ class AdminPanel {
         window.location.replace('/login.html');
     }
 
-    checkAuth() {
+    async checkAuth() {
         const token = localStorage.getItem('token');
         if (!token) {
             this.handleUnauthorized();
-            return;
+            return false;
         }
-        this.token = token;
-        document.getElementById('adminContent').style.display = 'block';
+
+        try {
+            // Verify token with server
+            const response = await fetch('/api/auth/user', {
+                headers: { 'x-auth-token': token }
+            });
+
+            if (!response.ok) {
+                this.handleUnauthorized();
+                return false;
+            }
+
+            this.token = token;
+            const adminContent = document.getElementById('adminContent');
+            if (adminContent) adminContent.style.display = 'block';
+            return true;
+        } catch (error) {
+            console.error('[ADMIN] Auth verification failed:', error);
+            this.handleUnauthorized();
+            return false;
+        }
     }
 
     logout() {
@@ -34,11 +50,16 @@ class AdminPanel {
         }
     }
 
-    init() {
-        this.setupEventListeners();
-        this.loadServices();
-        this.loadBookings();
-        this.loadUsers();
+    async init() {
+        const authenticated = await this.checkAuth();
+        if (authenticated) {
+            this.setupEventListeners();
+            this.loadServices();
+            this.loadBookings();
+            this.loadUsers();
+            window.is_admin_initialized = true;
+            console.log('[ADMIN] AdminPanel initialized successfully');
+        }
     }
 
     setupEventListeners() {
@@ -575,11 +596,16 @@ class AdminPanel {
     }
 
     renderUsersTable() {
+        console.log('[ADMIN] Rendering users table...', this.users ? this.users.length : 'null', 'users found');
         const tbody = document.getElementById('usersTableBody');
-        if (!tbody) return;
+        if (!tbody) {
+            console.error('[ADMIN] Element usersTableBody not found!');
+            return;
+        }
 
-        if (this.users.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4">No hay administradores registrados</td></tr>';
+        if (!this.users || this.users.length === 0) {
+            console.log('[ADMIN] No users to render or users array is empty');
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4">No hay administradores registrados o error de carga</td></tr>';
             return;
         }
 

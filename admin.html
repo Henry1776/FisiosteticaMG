@@ -65,6 +65,15 @@
             font-weight: bold;
         }
     </style>
+    <script>
+        // Immediate check to prevent flash of content
+        (function () {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.replace('/login.html');
+            }
+        })();
+    </script>
 </head>
 
 <body>
