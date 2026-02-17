@@ -570,7 +570,7 @@ class AdminPanel {
             this.renderUsersTable();
         } catch (error) {
             console.error('[ADMIN] Error loading users:', error);
-            // this.showError('Error al cargar administradores');
+            this.showError('Error al cargar administradores');
         }
     }
 
@@ -617,7 +617,7 @@ class AdminPanel {
     async updateUser() {
         const id = document.getElementById('editUserId').value;
         const username = document.getElementById('editUsername').value;
-        const email = document.getElementById('editEmail').value;
+        const email = document.getElementById('editEmailUser').value;
 
         try {
             const response = await fetch(`/api/auth/users/${id}`, {
