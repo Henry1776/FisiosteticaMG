@@ -34,6 +34,28 @@ router.post('/', bookingValidation, async (req, res) => {
             notes
         } = req.body;
 
+        // Enforce scheduling rules
+        const bookingDate = new Date(date + 'T' + time);
+        const dayOfWeek = bookingDate.getDay();
+        const now = new Date();
+
+        // 1. No Sundays
+        if (dayOfWeek === 0) {
+            return res.status(400).json({ error: 'Lo sentimos, no atendemos los domingos' });
+        }
+
+        // 2. Schedule 8 AM - 6 PM (Last booking at 5 PM)
+        const [hour] = time.split(':').map(Number);
+        if (hour < 8 || hour > 17) {
+            return res.status(400).json({ error: 'Horario fuera del rango de atención (8 AM - 6 PM)' });
+        }
+
+        // 3. 2-hour anticipation
+        const minTime = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+        if (bookingDate < minTime) {
+            return res.status(400).json({ error: 'Las citas deben reservarse con al menos 2 horas de anticipación' });
+        }
+
         // Check if the time slot is available
         const [existingBookings] = await db.execute(
             'SELECT id FROM bookings WHERE date = ? AND time = ? AND status != "cancelled"',
@@ -217,18 +239,40 @@ router.get('/available/:date', async (req, res) => {
 
         const bookedTimeSlots = bookedTimes.map(booking => booking.time);
 
-        // Define all possible time slots
+        // Define all possible time slots (8:00 AM to 5:00 PM start times)
         const allTimeSlots = [
-            '08:00', '09:00', '10:00', '11:00',
+            '08:00', '09:00', '10:00', '11:00', '12:00',
             '13:00', '14:00', '15:00', '16:00', '17:00'
         ];
 
-        // Filter out booked times
-        const availableSlots = allTimeSlots.filter(time =>
-            !bookedTimeSlots.includes(time)
-        );
+        // Filter by day of week (Closed on Sunday)
+        const selectedDate = new Date(date + 'T00:00:00');
+        const dayOfWeek = selectedDate.getDay();
+        if (dayOfWeek === 0) {
+            return res.json({ availableSlots: [], message: 'Cerrado los domingos' });
+        }
 
-        res.json({ availableSlots });
+        // Filter by 2h anticipation if today
+        const now = new Date();
+        const todayStr = now.toISOString().split('T')[0];
+
+        let filteredSlots = allTimeSlots.filter(time => !bookedTimeSlots.includes(time));
+
+        if (date === todayStr) {
+            const currentHour = now.getHours();
+            const currentMinute = now.getMinutes();
+
+            filteredSlots = filteredSlots.filter(time => {
+                const [slotHour, slotMinute] = time.split(':').map(Number);
+                const slotTotalMinutes = slotHour * 60 + slotMinute;
+                const nowTotalMinutes = currentHour * 60 + currentMinute;
+
+                // Must be at least 120 minutes (2 hours) in the future
+                return slotTotalMinutes >= (nowTotalMinutes + 120);
+            });
+        }
+
+        res.json({ availableSlots: filteredSlots });
     } catch (error) {
         console.error('Error fetching available slots:', error);
         res.status(500).json({ error: 'Error interno del servidor' });

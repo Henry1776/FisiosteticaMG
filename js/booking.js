@@ -58,12 +58,17 @@ document.addEventListener('DOMContentLoaded', function () {
             const data = Object.fromEntries(formData);
 
             // Validate date is not in the past
-            const selectedDate = new Date(data.date);
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
+            const selectedDate = new Date(data.date + 'T' + data.time);
+            const now = new Date();
+            const minTime = new Date(now.getTime() + 2 * 60 * 60 * 1000);
 
-            if (selectedDate < today) {
-                alert('Por favor selecciona una fecha futura.');
+            if (selectedDate < now) {
+                alert('La fecha y hora seleccionada ya ha pasado.');
+                return;
+            }
+
+            if (selectedDate < minTime) {
+                alert('Las citas deben reservarse con al menos 2 horas de anticipación.');
                 return;
             }
 
@@ -71,11 +76,6 @@ document.addEventListener('DOMContentLoaded', function () {
             const dayOfWeek = selectedDate.getDay();
             if (dayOfWeek === 0) { // Sunday
                 alert('No atendemos los domingos. Por favor selecciona otro día.');
-                return;
-            }
-
-            if (dayOfWeek === 6 && data.time > '14:00') { // Saturday after 2 PM
-                alert('Los sábados solo atendemos hasta las 2:00 PM.');
                 return;
             }
 
@@ -134,48 +134,40 @@ document.addEventListener('DOMContentLoaded', function () {
     const timeSelect = document.getElementById('time');
 
     if (dateInput && timeSelect) {
-        dateInput.addEventListener('change', function () {
-            const selectedDate = new Date(this.value);
-            const dayOfWeek = selectedDate.getDay();
+        dateInput.addEventListener('change', async function () {
+            const date = this.value;
+            if (!date) return;
 
-            // Clear current options
-            timeSelect.innerHTML = '<option value="">Selecciona una hora</option>';
+            // Clear current options and show loading
+            timeSelect.innerHTML = '<option value="">Cargando horarios...</option>';
 
-            let availableTimes = [];
+            try {
+                const response = await fetch(`/api/bookings/available/${date}`);
+                const data = await response.json();
 
-            if (dayOfWeek >= 1 && dayOfWeek <= 5) { // Monday to Friday
-                availableTimes = [
-                    { value: '08:00', text: '8:00 AM' },
-                    { value: '09:00', text: '9:00 AM' },
-                    { value: '10:00', text: '10:00 AM' },
-                    { value: '11:00', text: '11:00 AM' },
-                    { value: '13:00', text: '1:00 PM' },
-                    { value: '14:00', text: '2:00 PM' },
-                    { value: '15:00', text: '3:00 PM' },
-                    { value: '16:00', text: '4:00 PM' },
-                    { value: '17:00', text: '5:00 PM' }
-                ];
-            } else if (dayOfWeek === 6) { // Saturday
-                availableTimes = [
-                    { value: '09:00', text: '9:00 AM' },
-                    { value: '10:00', text: '10:00 AM' },
-                    { value: '11:00', text: '11:00 AM' },
-                    { value: '12:00', text: '12:00 PM' },
-                    { value: '13:00', text: '1:00 PM' },
-                    { value: '14:00', text: '2:00 PM' }
-                ];
-            } else { // Sunday
-                timeSelect.innerHTML = '<option value="">No disponible los domingos</option>';
-                return;
+                if (!response.ok) throw new Error(data.error || 'Error al cargar horarios');
+
+                timeSelect.innerHTML = '<option value="">Selecciona una hora</option>';
+
+                if (data.availableSlots && data.availableSlots.length > 0) {
+                    data.availableSlots.forEach(time => {
+                        const [hour, minute] = time.split(':');
+                        const ampm = hour >= 12 ? 'PM' : 'AM';
+                        const displayHour = hour % 12 || 12;
+                        const displayText = `${displayHour}:${minute} ${ampm}`;
+
+                        const option = document.createElement('option');
+                        option.value = time;
+                        option.textContent = displayText;
+                        timeSelect.appendChild(option);
+                    });
+                } else {
+                    timeSelect.innerHTML = `<option value="">${data.message || 'No hay horarios disponibles'}</option>`;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                timeSelect.innerHTML = '<option value="">Error al cargar horarios</option>';
             }
-
-            // Add available times to select
-            availableTimes.forEach(time => {
-                const option = document.createElement('option');
-                option.value = time.value;
-                option.textContent = time.text;
-                timeSelect.appendChild(option);
-            });
         });
     }
 });
