@@ -211,7 +211,7 @@ class AdminPanel {
             <tr>
                 <td><strong>${service.name}</strong></td>
                 <td>${service.description || '---'}</td>
-                <td>$${Math.round(service.price)}</td>
+                <td>₡${Math.round(service.price)}</td>
                 <td>${service.duration_minutes} min</td>
                 <td class="table-actions">
                     <button class="btn btn-sm btn-outline-primary me-1" onclick="adminPanel.editServiceObj(${service.id})">

@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 services.forEach(service => {
                     const option = document.createElement('option');
                     option.value = service.name.toLowerCase().replace(/\s+/g, '_'); // Consistent ID
-                    option.textContent = `${service.name} - $${Math.round(service.price)}`;
+                    option.textContent = `${service.name} - ₡${Math.round(service.price)}`;
                     option.setAttribute('data-price', service.price);
                     option.setAttribute('data-real-name', service.name);
                     serviceSelect.appendChild(option);
@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             if (price && price !== '0' && price !== '0.00') {
                 priceDisplay.classList.remove('hidden');
-                totalPrice.textContent = `$${Math.round(price)}`;
+                totalPrice.textContent = `₡${Math.round(price)}`;
             } else if (price === '0' || price === '0.00') {
                 priceDisplay.classList.remove('hidden');
                 totalPrice.textContent = 'Cotizar';
