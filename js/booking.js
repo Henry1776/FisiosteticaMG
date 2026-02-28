@@ -7,10 +7,21 @@ document.addEventListener('DOMContentLoaded', function () {
     // Load services dynamically
     async function loadServices() {
         try {
-            const response = await fetch('/api/services');
-            const services = await response.json();
+            let services;
+            try {
+                // Try dynamic API first
+                const response = await fetch('/api/services');
+                if (!response.ok) throw new Error('API not available');
+                services = await response.json();
+            } catch (apiError) {
+                console.warn('Backend API not available, trying static fallback:', apiError);
+                // Fallback to static JSON
+                const fallbackResponse = await fetch('data/services.json');
+                if (!fallbackResponse.ok) throw new Error('Fallback data not found');
+                services = await fallbackResponse.json();
+            }
 
-            if (serviceSelect) {
+            if (serviceSelect && services) {
                 // Keep the default option
                 serviceSelect.innerHTML = '<option value="">Selecciona un servicio</option>';
 
@@ -142,10 +153,22 @@ document.addEventListener('DOMContentLoaded', function () {
             timeSelect.innerHTML = '<option value="">Cargando horarios...</option>';
 
             try {
-                const response = await fetch(`/api/bookings/available/${date}`);
-                const data = await response.json();
-
-                if (!response.ok) throw new Error(data.error || 'Error al cargar horarios');
+                let data;
+                try {
+                    const response = await fetch(`/api/bookings/available/${date}`);
+                    data = await response.json();
+                    if (!response.ok) throw new Error(data.error || 'Error al cargar horarios');
+                } catch (apiError) {
+                    console.warn('Backend API not available for slots, providing default schedule:', apiError);
+                    // Default slots 8:00 AM - 6:00 PM (every hour)
+                    data = {
+                        availableSlots: [
+                            "08:00", "09:00", "10:00", "11:00", "12:00",
+                            "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"
+                        ],
+                        message: "Usando horario predeterminado (Servidor offline)"
+                    };
+                }
 
                 timeSelect.innerHTML = '<option value="">Selecciona una hora</option>';
 

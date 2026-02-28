@@ -1,0 +1,44 @@
+[
+    {
+        "name": "Servicio Premium",
+        "description": "Nuestro servicio más completo que incluye atención personalizada y seguimiento continuo",
+        "price": 99.00,
+        "duration_minutes": 90,
+        "is_active": true
+    },
+    {
+        "name": "Servicio Express",
+        "description": "Para cuando necesitas resultados rápidos. Servicio eficiente con la misma calidad",
+        "price": 59.00,
+        "duration_minutes": 45,
+        "is_active": true
+    },
+    {
+        "name": "Consultoría",
+        "description": "Asesoramiento profesional personalizado para ayudarte a tomar las mejores decisiones",
+        "price": 149.00,
+        "duration_minutes": 120,
+        "is_active": true
+    },
+    {
+        "name": "Soporte 24/7",
+        "description": "Atención continua para resolver cualquier inconveniente o duda",
+        "price": 29.00,
+        "duration_minutes": 30,
+        "is_active": true
+    },
+    {
+        "name": "Capacitación",
+        "description": "Programas de entrenamiento y capacitación para que tu equipo pueda aprovechar al máximo",
+        "price": 199.00,
+        "duration_minutes": 180,
+        "is_active": true
+    },
+    {
+        "name": "Soluciones Personalizadas",
+        "description": "Desarrollamos soluciones únicas adaptadas específicamente a tus necesidades",
+        "price": 0.00,
+        "duration_minutes": 60,
+        "is_active": true
+    }
+]

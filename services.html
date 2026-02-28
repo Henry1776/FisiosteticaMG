@@ -85,9 +85,29 @@
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
             const grid = document.getElementById('services-grid');
+            
+            async function fetchServices() {
+                try {
+                    // Try dynamic API first
+                    const response = await fetch('/api/services');
+                    if (!response.ok) throw new Error('API not available');
+                    return await response.json();
+                } catch (apiError) {
+                    console.warn('Backend API not available, trying static fallback:', apiError);
+                    try {
+                        // Fallback to static JSON
+                        const fallbackResponse = await fetch('data/services.json');
+                        if (!fallbackResponse.ok) throw new Error('Fallback data not found');
+                        return await fallbackResponse.json();
+                    } catch (fallbackError) {
+                        console.error('Both API and fallback failed:', fallbackError);
+                        throw new Error('Error al cargar los servicios');
+                    }
+                }
+            }
+
             try {
-                const response = await fetch('/api/services');
-                const services = await response.json();
+                const services = await fetchServices();
 
                 if (services.length === 0) {
                     grid.innerHTML = '<div class="col-span-full text-center py-10"><p class="text-gray-500">No hay servicios disponibles en este momento.</p></div>';
