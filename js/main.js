@@ -1,15 +1,15 @@
 // Mobile menu functionality
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     const mobileMenuBtn = document.getElementById('mobile-menu-btn');
     const mobileMenu = document.getElementById('mobile-menu');
 
     if (mobileMenuBtn && mobileMenu) {
-        mobileMenuBtn.addEventListener('click', function() {
+        mobileMenuBtn.addEventListener('click', function () {
             mobileMenu.classList.toggle('hidden');
         });
 
         // Close mobile menu when clicking outside
-        document.addEventListener('click', function(event) {
+        document.addEventListener('click', function (event) {
             if (!mobileMenuBtn.contains(event.target) && !mobileMenu.contains(event.target)) {
                 mobileMenu.classList.add('hidden');
             }
@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Close mobile menu when clicking on a link
         const mobileLinks = mobileMenu.querySelectorAll('a');
         mobileLinks.forEach(link => {
-            link.addEventListener('click', function() {
+            link.addEventListener('click', function () {
                 mobileMenu.classList.add('hidden');
             });
         });
@@ -27,21 +27,52 @@ document.addEventListener('DOMContentLoaded', function() {
     // Contact form functionality
     const contactForm = document.getElementById('contact-form');
     if (contactForm) {
-        contactForm.addEventListener('submit', function(e) {
+        contactForm.addEventListener('submit', async function (e) {
             e.preventDefault();
-            
+
+            const submitBtn = contactForm.querySelector('button[type="submit"]');
+            const originalBtnText = submitBtn.textContent;
+
             // Get form data
             const formData = new FormData(contactForm);
             const data = Object.fromEntries(formData);
-            
-            // Show success message
-            alert('¡Gracias por tu mensaje! Te contactaremos pronto.');
-            
-            // Reset form
-            contactForm.reset();
-            
-            // Here you would typically send the data to your backend
-            console.log('Contact form data:', data);
+
+            try {
+                // Show loading state
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Enviando...';
+
+                const response = await fetch('/api/contact', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    alert('¡Gracias por tu mensaje! Te contactaremos pronto.');
+                    contactForm.reset();
+                } else {
+                    const errorMsg = result.errors ? result.errors[0].msg : (result.error || 'Error al enviar el mensaje');
+                    alert('Error: ' + errorMsg);
+                }
+            } catch (error) {
+                console.error('Error submitting contact form:', error);
+                // On static sites (GitHub), this will most likely fail
+                // We show the success message anyway to avoid Frustrating the user if they're on GitHub
+                if (window.location.hostname.includes('github.io')) {
+                    alert('¡Gracias por tu mensaje! (Nota: Estás en modo de demostración)');
+                    contactForm.reset();
+                } else {
+                    alert('Error de conexión con el servidor. Por favor intenta más tarde.');
+                }
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalBtnText;
+            }
         });
     }
 
@@ -73,7 +104,7 @@ function showLoading(button) {
     const originalText = button.textContent;
     button.textContent = 'Enviando...';
     button.disabled = true;
-    
+
     setTimeout(() => {
         button.textContent = originalText;
         button.disabled = false;

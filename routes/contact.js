@@ -1,7 +1,15 @@
-const express = require('express');
-const { body, validationResult } = require('express-validator');
-const router = express.Router();
-const db = require('../config/database');
+const nodemailer = require('nodemailer');
+
+// Configure transporter
+const transporter = nodemailer.createTransport({
+    host: process.env.EMAIL_HOST,
+    port: process.env.EMAIL_PORT,
+    secure: process.env.EMAIL_PORT == 465,
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+    }
+});
 
 // Validation rules
 const contactValidation = [
@@ -21,12 +29,54 @@ router.post('/', contactValidation, async (req, res) => {
 
         const { name, email, phone, subject, message } = req.body;
 
-        // Insert contact message
+        // 1. Insert contact message in DB
         const [result] = await db.execute(
             `INSERT INTO contact_messages (name, email, phone, subject, message, created_at) 
              VALUES (?, ?, ?, ?, ?, NOW())`,
             [name, email, phone || null, subject, message]
         );
+
+        // 2. Send Emails (Non-blocking)
+        const companyName = process.env.COMPANY_NAME || 'Fisioestética MG';
+        const adminEmail = process.env.COMPANY_EMAIL || process.env.EMAIL_USER;
+
+        // Email to Admin
+        const adminMailOptions = {
+            from: `"${companyName}" <${process.env.EMAIL_USER}>`,
+            to: adminEmail,
+            subject: `Nuevo mensaje de contacto: ${subject}`,
+            html: `
+                <h3>Nuevo mensaje de contacto recibido</h3>
+                <p><strong>Nombre:</strong> ${name}</p>
+                <p><strong>Email:</strong> ${email}</p>
+                <p><strong>Teléfono:</strong> ${phone || 'No proporcionado'}</p>
+                <p><strong>Asunto:</strong> ${subject}</p>
+                <p><strong>Mensaje:</strong></p>
+                <p>${message}</p>
+            `
+        };
+
+        // Email to User (Confirmation)
+        const userMailOptions = {
+            from: `"${companyName}" <${process.env.EMAIL_USER}>`,
+            to: email,
+            subject: `Confirmación de mensaje - ${companyName}`,
+            html: `
+                <h3>Hola ${name},</h3>
+                <p>Gracias por contactarnos. Hemos recibido tu mensaje sobre "<strong>${subject}</strong>" y te responderemos lo antes posible.</p>
+                <br>
+                <p>Copia de tu mensaje:</p>
+                <blockquote style="border-left: 2px solid #ccc; padding-left: 10px; color: #666;">
+                    ${message}
+                </blockquote>
+                <br>
+                <p>Saludos,<br>El equipo de ${companyName}</p>
+            `
+        };
+
+        // Send emails asynchronously
+        transporter.sendMail(adminMailOptions).catch(err => console.error('Error sending admin email:', err));
+        transporter.sendMail(userMailOptions).catch(err => console.error('Error sending user email:', err));
 
         res.status(201).json({
             message: 'Mensaje enviado exitosamente',
