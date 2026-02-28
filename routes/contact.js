@@ -1,3 +1,7 @@
+const express = require('express');
+const { body, validationResult } = require('express-validator');
+const router = express.Router();
+const db = require('../config/database');
 const nodemailer = require('nodemailer');
 
 // Configure transporter
