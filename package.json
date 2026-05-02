@@ -13,7 +13,7 @@
     "helmet": "^7.1.0",
     "dotenv": "^16.3.1",
     "mysql2": "^3.6.5",
-    "nodemailer": "^6.9.7",
+    "nodemailer": "^8.0.5",
     "express-rate-limit": "^7.1.5",
     "express-validator": "^7.0.1",
     "bcryptjs": "^2.4.3",
