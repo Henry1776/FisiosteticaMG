@@ -13,13 +13,21 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
         // - file:// protocol → opened directly, use http://localhost:3000
         // - http on port 80/443 (WAMP) → Node.js is on port 3000
         // - already on port 3000 → no prefix needed
+        // Helper to detect correct API base URL (WAMP port 80 vs Node.js port 3000)
+        // Reemplaza tu bloque de apiBase por este:
+
         const { protocol, hostname, port } = window.location;
         let apiBase = '';
+
         if (protocol === 'file:') {
             apiBase = 'http://localhost:3000';
-        } else if (port === '' || port === '80' || port === '443') {
-            apiBase = `${protocol}//${hostname}:3000`;
+        } else if (hostname === 'localhost' || hostname === '127.0.0.1') {
+            apiBase = port === '3000' ? '' : 'http://localhost:3000';
+        } else {
+            // En Vercel, la API suele estar en el mismo dominio
+            apiBase = '';
         }
+
 
         const response = await fetch(`${apiBase}/api/auth/login`, {
             method: 'POST',
