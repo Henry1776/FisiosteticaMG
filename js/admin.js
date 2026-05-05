@@ -1,3 +1,23 @@
+// ─── API base URL helper ────────────────────────────────────────────────────
+// Works for: file://, WAMP on port 80, and production (same-domain)
+function getApiBase() {
+    const { protocol, hostname, port } = window.location;
+    if (protocol === 'file:') return 'http://localhost:3000';
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        return port === '3000' ? '' : 'http://localhost:3000';
+    }
+    return ''; // production: API is on the same domain
+}
+
+// ─── Show/hide password toggle ───────────────────────────────────────────────
+function togglePwd(inputId, btn) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    const isText = input.type === 'text';
+    input.type = isText ? 'password' : 'text';
+    btn.innerHTML = isText ? '<i class="fas fa-eye"></i>' : '<i class="fas fa-eye-slash"></i>';
+}
+
 class AdminPanel {
     constructor() {
         console.log('[ADMIN] AdminPanel scaling up...');
@@ -11,7 +31,8 @@ class AdminPanel {
     handleUnauthorized() {
         console.log('[ADMIN] Unauthorized access detected, clearing token and redirecting');
         localStorage.removeItem('token');
-        window.location.replace('/login.html');
+        const base = getApiBase();
+        window.location.replace(base ? base + '/login.html' : 'login.html');
     }
 
     async checkAuth() {
@@ -23,7 +44,7 @@ class AdminPanel {
 
         try {
             // Verify token with server
-            const response = await fetch('/api/auth/user', {
+            const response = await fetch(getApiBase() + '/api/auth/user', {
                 headers: { 'x-auth-token': token }
             });
 
@@ -46,7 +67,8 @@ class AdminPanel {
     logout() {
         if (confirm('¿Estás seguro de que deseas cerrar la sesión?')) {
             localStorage.removeItem('token');
-            window.location.replace('/login.html');
+            const base = getApiBase();
+            window.location.replace(base ? base + '/login.html' : 'login.html');
         }
     }
 
@@ -109,6 +131,14 @@ class AdminPanel {
             });
         }
 
+        // Change password button
+        const savePasswordBtn = document.getElementById('savePasswordBtn');
+        if (savePasswordBtn) {
+            savePasswordBtn.addEventListener('click', () => {
+                this.changePassword();
+            });
+        }
+
         // Tab switching
         const tabs = ['stats', 'bookings', 'users', 'services'];
         tabs.forEach(tab => {
@@ -145,7 +175,7 @@ class AdminPanel {
         try {
             console.log('[ADMIN] Loading bookings...');
             this.showLoading(true);
-            const response = await fetch('/api/bookings', {
+            const response = await fetch(getApiBase() + '/api/bookings', {
                 headers: { 'x-auth-token': this.token }
             });
 
@@ -176,7 +206,7 @@ class AdminPanel {
 
     async loadServices() {
         try {
-            const response = await fetch('/api/services');
+            const response = await fetch(getApiBase() + '/api/services');
             this.services = await response.json();
             this.updateServiceDropdown();
         } catch (error) {
@@ -264,7 +294,7 @@ class AdminPanel {
         }
 
         try {
-            const response = await fetch('/api/services', {
+            const response = await fetch(getApiBase() + '/api/services', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -292,7 +322,7 @@ class AdminPanel {
         if (!confirm('¿Estás seguro de eliminar este servicio?')) return;
 
         try {
-            const response = await fetch(`/api/services/${id}`, {
+            const response = await fetch(getApiBase() + `/api/services/${id}`, {
                 method: 'DELETE',
                 headers: {
                     'x-auth-token': this.token
@@ -469,7 +499,7 @@ class AdminPanel {
         }
 
         try {
-            const response = await fetch(`/api/bookings/${bookingId}/status`, {
+            const response = await fetch(getApiBase() + `/api/bookings/${bookingId}/status`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
@@ -537,7 +567,7 @@ class AdminPanel {
         };
 
         try {
-            const response = await fetch(`/api/bookings/${bookingId}`, {
+            const response = await fetch(getApiBase() + `/api/bookings/${bookingId}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -573,7 +603,7 @@ class AdminPanel {
     async loadUsers() {
         try {
             console.log('[ADMIN] Loading users...');
-            const response = await fetch('/api/auth/users', {
+            const response = await fetch(getApiBase() + '/api/auth/users', {
                 headers: { 'x-auth-token': this.token }
             });
 
@@ -646,7 +676,7 @@ class AdminPanel {
         const email = document.getElementById('editEmailUser').value;
 
         try {
-            const response = await fetch(`/api/auth/users/${id}`, {
+            const response = await fetch(getApiBase() + `/api/auth/users/${id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -689,7 +719,7 @@ class AdminPanel {
         if (!confirm('¿Estás seguro de eliminar este administrador?')) return;
 
         try {
-            const response = await fetch(`/api/auth/users/${id}`, {
+            const response = await fetch(getApiBase() + `/api/auth/users/${id}`, {
                 method: 'DELETE',
                 headers: { 'x-auth-token': this.token }
             });
@@ -734,7 +764,7 @@ class AdminPanel {
 
         try {
             console.log('[ADMIN] Sending registration request...');
-            const response = await fetch('/api/auth/register', {
+            const response = await fetch(getApiBase() + '/api/auth/register', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -776,7 +806,7 @@ class AdminPanel {
         }
 
         try {
-            const response = await fetch(`/api/bookings/${bookingId}`, {
+            const response = await fetch(getApiBase() + `/api/bookings/${bookingId}`, {
                 method: 'DELETE',
                 headers: { 'x-auth-token': this.token }
             });
@@ -795,6 +825,71 @@ class AdminPanel {
         } catch (error) {
             console.error('Error deleting booking:', error);
             this.showError('Error al eliminar la cita');
+        }
+    }
+
+    async changePassword() {
+        const alertDiv = document.getElementById('changePasswordAlert');
+        const currentPwd = document.getElementById('currentPassword').value;
+        const newPwd = document.getElementById('newPassword').value;
+        const confirmPwd = document.getElementById('confirmPassword').value;
+
+        // Validation
+        if (!currentPwd || !newPwd || !confirmPwd) {
+            alertDiv.innerHTML = '<div class="alert alert-warning">Por favor completa todos los campos.</div>';
+            return;
+        }
+        if (newPwd.length < 6) {
+            alertDiv.innerHTML = '<div class="alert alert-warning">La nueva contraseña debe tener al menos 6 caracteres.</div>';
+            return;
+        }
+        if (newPwd !== confirmPwd) {
+            alertDiv.innerHTML = '<div class="alert alert-danger">¡Las contraseñas nuevas no coinciden!</div>';
+            return;
+        }
+
+        const btn = document.getElementById('savePasswordBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Guardando...';
+        alertDiv.innerHTML = '';
+
+        try {
+            const response = await fetch(getApiBase() + '/api/auth/change-password', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-auth-token': this.token
+                },
+                body: JSON.stringify({ currentPassword: currentPwd, newPassword: newPwd })
+            });
+
+            const data = await response.json();
+
+            if (response.status === 401) {
+                this.handleUnauthorized();
+                return;
+            }
+
+            if (!response.ok) {
+                throw new Error(data.msg || data.error || 'Error al cambiar la contraseña');
+            }
+
+            alertDiv.innerHTML = '<div class="alert alert-success"><i class="fas fa-check me-2"></i>Contraseña cambiada exitosamente.</div>';
+            document.getElementById('changePasswordForm').reset();
+
+            // Auto-close modal after 2s
+            setTimeout(() => {
+                const modal = bootstrap.Modal.getInstance(document.getElementById('changePasswordModal'));
+                if (modal) modal.hide();
+                alertDiv.innerHTML = '';
+            }, 2000);
+
+        } catch (error) {
+            console.error('Error changing password:', error);
+            alertDiv.innerHTML = `<div class="alert alert-danger"><i class="fas fa-exclamation-circle me-2"></i>${error.message}</div>`;
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-save me-1"></i>Guardar nueva contraseña';
         }
     }
 

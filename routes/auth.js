@@ -183,4 +183,48 @@ router.put('/users/:id', auth, async (req, res) => {
     }
 });
 
+// @route   PUT api/auth/change-password
+// @desc    Change current user's password
+// @access  Private
+router.put('/change-password', [
+    auth,
+    body('currentPassword', 'La contraseña actual es obligatoria').exists(),
+    body('newPassword', 'La nueva contraseña debe tener al menos 6 caracteres').isLength({ min: 6 })
+], async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { currentPassword, newPassword } = req.body;
+
+    try {
+        // Get user from database
+        const [users] = await db.execute('SELECT * FROM users WHERE id = ?', [req.user.id]);
+        if (users.length === 0) {
+            return res.status(404).json({ msg: 'Usuario no encontrado' });
+        }
+
+        const user = users[0];
+
+        // Verify current password
+        const isMatch = await bcrypt.compare(currentPassword, user.password_hash);
+        if (!isMatch) {
+            return res.status(400).json({ msg: 'La contraseña actual es incorrecta' });
+        }
+
+        // Hash new password
+        const salt = await bcrypt.genSalt(10);
+        const passwordHash = await bcrypt.hash(newPassword, salt);
+
+        // Update password in database
+        await db.execute('UPDATE users SET password_hash = ? WHERE id = ?', [passwordHash, req.user.id]);
+
+        res.json({ msg: 'Contraseña actualizada correctamente' });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Error del servidor');
+    }
+});
+
 module.exports = router;
