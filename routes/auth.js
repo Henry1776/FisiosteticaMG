@@ -5,12 +5,23 @@ const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 const db = require('../config/database');
 const auth = require('../middleware/auth');
+const rateLimit = require('express-rate-limit');
+
+// Rate limiter for authentication routes
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 10, // Limit each IP to 10 requests per windowMs
+    message: { msg: 'Demasiados intentos desde esta IP, por favor intente de nuevo después de 15 minutos' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
 
 // @route   POST api/auth/login
 // @desc    Authenticate user & get token
 // @access  Public
 router.post('/login', [
-    body('email', 'Please include a valid email').isEmail(),
+    authLimiter,
+    body('email', 'Please include a valid email').isEmail().normalizeEmail(),
     body('password', 'Password is required').exists()
 ], async (req, res) => {
     const errors = validationResult(req);
@@ -80,8 +91,9 @@ router.post('/login', [
 // @access  Private (Admin only)
 router.post('/register', [
     auth, // Protect route
-    body('username', 'Username is required').not().isEmpty(),
-    body('email', 'Please include a valid email').isEmail(),
+    authLimiter,
+    body('username', 'Username is required').not().isEmpty().trim().escape(),
+    body('email', 'Please include a valid email').isEmail().normalizeEmail(),
     body('password', 'Please enter a password with 6 or more characters').isLength({ min: 6 })
 ], async (req, res) => {
     const errors = validationResult(req);
@@ -188,6 +200,7 @@ router.put('/users/:id', auth, async (req, res) => {
 // @access  Private
 router.put('/change-password', [
     auth,
+    authLimiter,
     body('currentPassword', 'La contraseña actual es obligatoria').exists(),
     body('newPassword', 'La nueva contraseña debe tener al menos 6 caracteres').isLength({ min: 6 })
 ], async (req, res) => {
