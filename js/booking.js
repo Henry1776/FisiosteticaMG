@@ -1,3 +1,16 @@
+// Helper to detect correct API base URL
+function getApiBase() {
+    const { protocol, hostname, port } = window.location;
+    // Opened as file:// directly
+    if (protocol === 'file:') return 'http://localhost:3000';
+    // Served via WAMP/Apache (port 80 or 443) — Node.js runs on 3000
+    if (port === '' || port === '80' || port === '443') {
+        return `${protocol}//${hostname}:3000`;
+    }
+    // Already on the Node.js port — no prefix needed
+    return '';
+}
+
 document.addEventListener('DOMContentLoaded', function () {
     const bookingForm = document.getElementById('booking-form');
     const serviceSelect = document.getElementById('service');
@@ -10,7 +23,7 @@ document.addEventListener('DOMContentLoaded', function () {
             let services;
             try {
                 // Try dynamic API first
-                const response = await fetch('/api/services');
+                const response = await fetch(`${getApiBase()}/api/services`);
                 if (!response.ok) throw new Error('API not available');
                 services = await response.json();
             } catch (apiError) {
@@ -94,7 +107,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const submitBtn = bookingForm.querySelector('button[type="submit"]');
             showLoading(submitBtn);
 
-            fetch('/api/bookings', {
+            fetch(`${getApiBase()}/api/bookings`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -111,7 +124,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 .then(result => {
                     hideLoading(submitBtn);
                     if (result.bookingId) {
-                        alert(`¡Reserva confirmada! Tu número de reserva es: ${result.bookingId}\n\nRecibirás un email de confirmación pronto.`);
+                        alert(`¡Reserva confirmada! Tu número de reserva es: ${result.bookingId}\n\nRecibirás un email de confirmación a tu correo electrónico.`);
                         bookingForm.reset();
                         if (priceDisplay) priceDisplay.classList.add('hidden');
                     } else {
@@ -155,7 +168,7 @@ document.addEventListener('DOMContentLoaded', function () {
             try {
                 let data;
                 try {
-                    const response = await fetch(`/api/bookings/available/${date}`);
+                    const response = await fetch(`${getApiBase()}/api/bookings/available/${date}`);
                     data = await response.json();
                     if (!response.ok) throw new Error(data.error || 'Error al cargar horarios');
                 } catch (apiError) {

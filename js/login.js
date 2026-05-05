@@ -9,7 +9,19 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     alertPlaceholder.innerHTML = '';
 
     try {
-        const response = await fetch('/api/auth/login', {
+        // Determine the correct API base URL
+        // - file:// protocol → opened directly, use http://localhost:3000
+        // - http on port 80/443 (WAMP) → Node.js is on port 3000
+        // - already on port 3000 → no prefix needed
+        const { protocol, hostname, port } = window.location;
+        let apiBase = '';
+        if (protocol === 'file:') {
+            apiBase = 'http://localhost:3000';
+        } else if (port === '' || port === '80' || port === '443') {
+            apiBase = `${protocol}//${hostname}:3000`;
+        }
+
+        const response = await fetch(`${apiBase}/api/auth/login`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -27,7 +39,12 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
         localStorage.setItem('token', data.token);
 
         // Redirect to admin panel
-        window.location.href = '/admin';
+        // If opened via file://, must redirect to the Node.js server URL
+        if (window.location.protocol === 'file:') {
+            window.location.href = 'http://localhost:3000/admin.html';
+        } else {
+            window.location.href = 'admin.html';
+        }
 
     } catch (error) {
         const wrapper = document.createElement('div');
@@ -43,5 +60,9 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
 
 // Check if already logged in
 if (localStorage.getItem('token')) {
-    window.location.href = '/admin';
+    if (window.location.protocol === 'file:') {
+        window.location.href = 'http://localhost:3000/admin.html';
+    } else {
+        window.location.href = 'admin.html';
+    }
 }

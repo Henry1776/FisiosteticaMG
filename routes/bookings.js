@@ -3,6 +3,18 @@ const { body, validationResult } = require('express-validator');
 const router = express.Router();
 const db = require('../config/database');
 const auth = require('../middleware/auth');
+const nodemailer = require('nodemailer');
+
+// Configure email transporter
+const transporter = nodemailer.createTransport({
+    host: process.env.EMAIL_HOST,
+    port: process.env.EMAIL_PORT,
+    secure: process.env.EMAIL_PORT == 465,
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+    }
+});
 
 // Validation rules
 const bookingValidation = [
@@ -75,6 +87,77 @@ router.post('/', bookingValidation, async (req, res) => {
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())`,
             [bookingId, firstName, lastName, email, phone, service, date, time, notes || null]
         );
+
+        // Send email notifications (non-blocking)
+        const companyName = process.env.COMPANY_NAME || 'Fisioestética MG';
+        const adminEmail = 'info@fisiosteticamg.com';
+
+        // Format date for display
+        const [year, month, day] = date.split('-');
+        const dateFormatted = `${day}/${month}/${year}`;
+        const [, min] = time.split(':');  // 'hour' is already declared above (line 60)
+        const h = hour > 12 ? hour - 12 : hour;
+        const timeFormatted = `${h}:${min} ${hour >= 12 ? 'PM' : 'AM'}`;
+
+        // Email to Admin
+        const adminMailOptions = {
+            from: `"${companyName}" <${process.env.EMAIL_USER}>`,
+            to: adminEmail,
+            subject: `Nueva reserva: ${bookingId} - ${firstName} ${lastName}`,
+            html: `
+                <h3>Nueva reserva recibida</h3>
+                <p><strong>ID de reserva:</strong> ${bookingId}</p>
+                <p><strong>Cliente:</strong> ${firstName} ${lastName}</p>
+                <p><strong>Email:</strong> ${email}</p>
+                <p><strong>Teléfono:</strong> ${phone}</p>
+                <p><strong>Servicio:</strong> ${service}</p>
+                <p><strong>Fecha:</strong> ${dateFormatted}</p>
+                <p><strong>Hora:</strong> ${timeFormatted}</p>
+                ${notes ? `<p><strong>Notas:</strong> ${notes}</p>` : ''}
+            `
+        };
+
+        // Confirmation email to Customer
+        const customerMailOptions = {
+            from: `"${companyName}" <${process.env.EMAIL_USER}>`,
+            to: email,
+            subject: `¡Reserva confirmada! - ${companyName} (${bookingId})`,
+            html: `
+                <h2>¡Hola ${firstName}!</h2>
+                <p>Tu reserva ha sido recibida exitosamente. A continuación encontrarás los detalles:</p>
+                <table style="border-collapse:collapse; width:100%; max-width:500px;">
+                    <tr style="background:#f3f4f6;">
+                        <td style="padding:8px 12px; font-weight:bold;">ID de Reserva</td>
+                        <td style="padding:8px 12px;">${bookingId}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:8px 12px; font-weight:bold;">Servicio</td>
+                        <td style="padding:8px 12px;">${service}</td>
+                    </tr>
+                    <tr style="background:#f3f4f6;">
+                        <td style="padding:8px 12px; font-weight:bold;">Fecha</td>
+                        <td style="padding:8px 12px;">${dateFormatted}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:8px 12px; font-weight:bold;">Hora</td>
+                        <td style="padding:8px 12px;">${timeFormatted}</td>
+                    </tr>
+                    ${notes ? `<tr style="background:#f3f4f6;"><td style="padding:8px 12px; font-weight:bold;">Notas</td><td style="padding:8px 12px;">${notes}</td></tr>` : ''}
+                </table>
+                <br>
+                <p>Si necesitas modificar o cancelar tu cita, comunícate con nosotros:</p>
+                <ul>
+                    <li>📧 <a href="mailto:info@fisiosteticamg.com">info@fisiosteticamg.com</a></li>
+                    <li>📞 / 💬 WhatsApp: <a href="https://wa.me/50687253839">+506 8725 3839</a></li>
+                </ul>
+                <p>¡Te esperamos!</p>
+                <p>El equipo de <strong>${companyName}</strong></p>
+            `
+        };
+
+        // Send both emails asynchronously
+        transporter.sendMail(adminMailOptions).catch(err => console.error('Error sending admin booking email:', err));
+        transporter.sendMail(customerMailOptions).catch(err => console.error('Error sending customer booking email:', err));
 
         res.status(201).json({
             message: 'Reserva creada exitosamente',

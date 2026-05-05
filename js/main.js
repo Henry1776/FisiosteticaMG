@@ -42,7 +42,18 @@ document.addEventListener('DOMContentLoaded', function () {
                 submitBtn.disabled = true;
                 submitBtn.textContent = 'Enviando...';
 
-                const response = await fetch('/api/contact', {
+                // Determine the correct API base URL
+                // - file:// protocol → opened directly, use http://localhost:3000
+                // - http on port 80/443 (WAMP) → Node.js is on port 3000
+                const { protocol, hostname, port } = window.location;
+                let apiBase = '';
+                if (protocol === 'file:') {
+                    apiBase = 'http://localhost:3000';
+                } else if (port === '' || port === '80' || port === '443') {
+                    apiBase = `${protocol}//${hostname}:3000`;
+                }
+
+                const response = await fetch(`${apiBase}/api/contact`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -61,14 +72,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             } catch (error) {
                 console.error('Error submitting contact form:', error);
-                // On static sites (GitHub), this will most likely fail
-                // We show the success message anyway to avoid Frustrating the user if they're on GitHub
-                if (window.location.hostname.includes('github.io')) {
-                    alert('¡Gracias por tu mensaje! (Nota: Estás en modo de demostración)');
-                    contactForm.reset();
-                } else {
-                    alert('Error de conexión con el servidor. Por favor intenta más tarde.');
-                }
+                // Fallback: open mailto link
+                const subject = encodeURIComponent(data.subject || 'Contacto desde sitio web');
+                const body = encodeURIComponent(
+                    `Nombre: ${data.name}\nEmail: ${data.email}\nTeléfono: ${data.phone || 'No proporcionado'}\n\nMensaje:\n${data.message}`
+                );
+                window.location.href = `mailto:info@fisiosteticamg.com?subject=${subject}&body=${body}`;
+                alert('¡Se abrirá tu cliente de correo para enviar el mensaje a info@fisiosteticamg.com!');
+                contactForm.reset();
             } finally {
                 submitBtn.disabled = false;
                 submitBtn.textContent = originalBtnText;
